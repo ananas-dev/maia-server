@@ -1,10 +1,9 @@
 use std::process::Stdio;
 
 use futures_util::stream::{SplitSink};
-use futures_util::{FutureExt, StreamExt, SinkExt};
+use futures_util::{StreamExt, SinkExt};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Command, ChildStdin};
-use tokio::spawn;
 use warp::ws::{WebSocket, Message};
 use warp::Filter;
 
@@ -26,7 +25,7 @@ async fn main() {
 }
 
 async fn ws_uci_session(ws: WebSocket) {
-    let (mut tx, mut rx) = ws.split();
+    let (tx, mut rx) = ws.split();
     let mut engine_stdin = spawn_lila(tx).await.unwrap();
 
     while let Some(result) = rx.next().await {
