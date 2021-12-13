@@ -44,6 +44,7 @@ async fn spawn_lila(
         .arg("--weights=./maia-chess/maia_weights/maia-1500.pb.gz")
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
+        .stderr(Stdio::null())
         .spawn()?;
 
     let stdout = engine
