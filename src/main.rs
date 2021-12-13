@@ -1,11 +1,11 @@
 use std::process::Stdio;
-
 use futures_util::stream::SplitSink;
 use futures_util::{SinkExt, StreamExt};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, Command};
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
+use log::{debug, error};
 
 #[tokio::main]
 async fn main() {
@@ -28,8 +28,11 @@ async fn ws_uci_session(ws: WebSocket) {
 
     while let Some(result) = rx.next().await {
         if let Ok(msg) = result {
-            engine_stdin.write_all(msg.as_bytes()).await.unwrap();
-            engine_stdin.write_all(b"\n").await.unwrap();
+            if msg.is_text() {
+                // Add a new line to the ws message
+                let msg = [msg.as_bytes(), b"\n"].concat();
+                engine_stdin.write_all(&msg).await.unwrap();
+            }
         }
     }
 
@@ -65,7 +68,10 @@ async fn spawn_lila(
             .await
             .expect("child process encountered an error");
 
-        println!("child status was: {}", status);
+        match engine.id() {
+            Some(pid) => debug!("lc0 ({}) exited with status: {}", pid, status),
+            None => error!("could not find pid of lc0 instance!")
+        }
     });
 
     let mut reader = BufReader::new(stdout).lines();
