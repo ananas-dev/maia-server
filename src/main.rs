@@ -68,10 +68,7 @@ async fn spawn_lila(
             .await
             .expect("child process encountered an error");
 
-        match engine.id() {
-            Some(pid) => debug!("lc0 ({}) exited with status: {}", pid, status),
-            None => error!("could not find pid of lc0 instance!")
-        }
+        debug!("lc0 exited with status: {}", status);
     });
 
     let mut reader = BufReader::new(stdout).lines();
