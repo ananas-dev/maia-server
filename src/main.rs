@@ -1,10 +1,10 @@
 use std::process::Stdio;
 
-use futures_util::stream::{SplitSink};
-use futures_util::{StreamExt, SinkExt};
+use futures_util::stream::SplitSink;
+use futures_util::{SinkExt, StreamExt};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Command, ChildStdin};
-use warp::ws::{WebSocket, Message};
+use tokio::process::{ChildStdin, Command};
+use warp::ws::{Message, WebSocket};
 use warp::Filter;
 
 #[tokio::main]
@@ -16,9 +16,7 @@ async fn main() {
         .and(warp::ws())
         .map(|ws: warp::ws::Ws| {
             // And then our closure will be called when it completes...
-            ws.on_upgrade(|websocket| {
-                ws_uci_session(websocket)
-            })
+            ws.on_upgrade(|websocket| ws_uci_session(websocket))
         });
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
@@ -39,7 +37,9 @@ async fn ws_uci_session(ws: WebSocket) {
     engine_stdin.write_all(b"quit\n").await.unwrap();
 }
 
-async fn spawn_lila(mut tx: SplitSink<WebSocket, Message>) -> Result<ChildStdin, Box<dyn std::error::Error>> {
+async fn spawn_lila(
+    mut tx: SplitSink<WebSocket, Message>,
+) -> Result<ChildStdin, Box<dyn std::error::Error>> {
     let mut engine = Command::new("./lc0/build/release/lc0")
         .arg("--weights=./maia-chess/maia_weights/maia-1500.pb.gz")
         .stdout(Stdio::piped())
@@ -51,7 +51,7 @@ async fn spawn_lila(mut tx: SplitSink<WebSocket, Message>) -> Result<ChildStdin,
         .take()
         .expect("child did not have a handle to stdout");
 
-    let mut stdin = engine
+    let stdin = engine
         .stdin
         .take()
         .expect("child did not have to handle to stdin");
@@ -66,9 +66,6 @@ async fn spawn_lila(mut tx: SplitSink<WebSocket, Message>) -> Result<ChildStdin,
 
         println!("child status was: {}", status);
     });
-
-    // Disable searching
-    stdin.write_all(b"go nodes 1\n").await?;
 
     let mut reader = BufReader::new(stdout).lines();
 
